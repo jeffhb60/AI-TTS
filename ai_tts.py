@@ -1,58 +1,108 @@
 import os
+import tkinter as tk
+from tkinter import messagebox
 from gtts import gTTS
-# from playsound import playsound
 import pygame
-# import pyttsx3
+import threading
 
-con_prog = True
+# Initialize pygame mixer
+pygame.mixer.init()
 
-while con_prog:
-    txt = input("Please enter some text to output to a file: ")
+# Create main window
+root = tk.Tk()
+root.title("AI-TTS Text-to-Speech")
+root.geometry("500x400")
 
-    # Remove cost calculation if using a free service
-    # cost = len(txt)/1000 * 0.15
-    # print("Having this converted to speech will cost about ${:.2f}.".format(cost))
 
-    con = input("Would you like to continue (Y/N)? ")
+# Function to create the MP3 file
+def create_mp3():
+    text = text_entry.get("1.0", tk.END).strip()
+    if not text:
+        messagebox.showwarning("Input Error", "Please enter some text.")
+        return
 
-    while con.upper() != "Y" and con.upper() != "N":
-        print("Invalid choice. Please try again.")
-        con = input("Would you like to continue (Y/N)? ")
+    filename = filename_entry.get().strip()
+    if not filename:
+        messagebox.showwarning("Input Error", "Please enter a filename.")
+        return
 
-    f = input("Enter the filename: ")
-    if con.upper() == "Y":
-        try:
-            tts = gTTS(text=txt, lang="en", slow=False)
+    # Ensure 'sound' directory exists
+    if not os.path.exists("sound"):
+        os.makedirs("sound")
 
-            tts.save("sound/" + f + ".mp3")
-            print("MP3 file created successfully.")
+    filepath = os.path.join("sound", filename + ".mp3")
+    try:
+        tts = gTTS(text=text, lang="en", slow=False)
+        tts.save(filepath)
+        messagebox.showinfo("Success", f"MP3 file '{filename}.mp3' created successfully.")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
 
-            play = input("Would you like to play the audio now? (Y/N): ")
-            if play.upper() == "Y":
-                try:
-                    pygame.mixer.init()
-                    pygame.mixer.music.load("sound/" + f + ".mp3")
-                    pygame.mixer.music.play()
-                    print("Playing audio...")
-                    # Keep the script running until playback finishes
-                    while pygame.mixer.music.get_busy():
-                        pygame.time.Clock().tick(10)
-                except Exception as e:
-                    print(f"An error occurred while playing audio: {e}")
-                finally:
-                    pygame.mixer.music.unload()
-        except Exception as e:
-            print(f"An error occurred: {e}")
 
-    elif con.upper() == "N":
-        print("Thank you for using AI-TTS! No file was created.")
+# Function to play the MP3 file
+def play_mp3():
+    filename = filename_entry.get().strip()
+    if not filename:
+        messagebox.showwarning("Input Error", "Please enter a filename to play.")
+        return
 
-    again = input("Would you like to create another voice sound? (Y/N): ").strip().upper()
+    filepath = os.path.join("sound", filename + ".mp3")
+    if not os.path.exists(filepath):
+        messagebox.showwarning("File Not Found", f"The file '{filename}.mp3' does not exist.")
+        return
 
-    while again != "Y" and again != "N":
-        print("Invalid choice. Please try again.")
-        again = input("Would you like to create another voice sound? (Y/N): ").strip().upper()
+    try:
+        pygame.mixer.music.load(filepath)
+        pygame.mixer.music.play()
+        # Run a separate thread to monitor playback
+        threading.Thread(target=check_playback, daemon=True).start()
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred while playing audio: {e}")
 
-    if again == "N":
-        con_prog = False
-        print("Goodbye!")
+
+def check_playback():
+    while pygame.mixer.music.get_busy():
+        pass
+    pygame.mixer.music.unload()
+    messagebox.showinfo("Playback Finished", "Audio playback has finished.")
+
+
+# Function to reset the fields
+def reset_fields():
+    text_entry.delete("1.0", tk.END)
+    filename_entry.delete(0, tk.END)
+
+
+# Function to exit the application
+def exit_app():
+    root.destroy()
+
+
+# GUI Elements
+text_label = tk.Label(root, text="Enter text to convert to speech:")
+text_label.pack(pady=5)
+text_entry = tk.Text(root, height=5, width=60)
+text_entry.pack(pady=5)
+
+filename_label = tk.Label(root, text="Enter filename (without extension):")
+filename_label.pack(pady=5)
+filename_entry = tk.Entry(root, width=50)
+filename_entry.pack(pady=5)
+
+button_frame = tk.Frame(root)
+button_frame.pack(pady=10)
+
+create_button = tk.Button(button_frame, text="Create MP3 File", command=create_mp3)
+create_button.grid(row=0, column=0, padx=5)
+
+play_button = tk.Button(button_frame, text="Play MP3 File", command=play_mp3)
+play_button.grid(row=0, column=1, padx=5)
+
+reset_button = tk.Button(button_frame, text="Reset", command=reset_fields)
+reset_button.grid(row=0, column=2, padx=5)
+
+exit_button = tk.Button(button_frame, text="Exit", command=exit_app)
+exit_button.grid(row=0, column=3, padx=5)
+
+# Start the main loop
+root.mainloop()
