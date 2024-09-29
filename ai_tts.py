@@ -1,7 +1,7 @@
 import os
 from gtts import gTTS
-from playsound import playsound
-
+# from playsound import playsound
+import pygame
 
 txt = input("Please enter some text to output to a file: ")
 
@@ -16,17 +16,27 @@ while con.upper() != "Y" and con.upper() != "N":
     con = input("Would you like to continue (Y/N)? ")
 
 f = input("Enter the filename: ")
-
 if con.upper() == "Y":
     try:
-        # Create the TTS object
-        tts = gTTS(text=txt, lang='en', slow=False)
+        tts = gTTS(text=txt, lang="en", slow=False)
 
-        # Save the audio file
-        tts.save("sound/"+f+".mp3")
+        tts.save("sound/" + f + ".mp3")
         print("MP3 file created successfully.")
 
-        print("Your file has been downloaded!")
+        play = input("Would you like to play the audio now? (Y/N): ")
+        if play.upper() == "Y":
+            try:
+                pygame.mixer.init()
+                pygame.mixer.music.load("sound/" + f + ".mp3")
+                pygame.mixer.music.play()
+                print("Playing audio...")
+                # Keep the script running until playback finishes
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+            except Exception as e:
+                print(f"An error occurred while playing audio: {e}")
+            finally:
+                pygame.mixer.music.unload()
     except Exception as e:
         print(f"An error occurred: {e}")
 
